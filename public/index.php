@@ -17,11 +17,10 @@ $office_filter = isset($_GET['office']) ? $_GET['office'] : '';
 $status_filter = isset($_GET['status']) ? $_GET['status'] : '';
 $search = isset($_GET['search']) ? $_GET['search'] : '';
 
-// Build Query
 $sql = "SELECT p.*, t.type_name, f.photo_path 
         FROM projects p 
         LEFT JOIN project_types t ON p.project_type_id = t.id 
-        LEFT JOIN (SELECT project_id, photo_path FROM project_photos GROUP BY project_id) f ON p.id = f.project_id
+        LEFT JOIN (SELECT project_id, ANY_VALUE(photo_path) as photo_path FROM project_photos GROUP BY project_id) f ON p.id = f.project_id
         WHERE p.approval_status = 'approved'";
 
 if ($district_filter) {
