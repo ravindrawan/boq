@@ -322,6 +322,7 @@ $offices = $conn->query("SELECT DISTINCT office_name FROM projects WHERE approva
     if (districtSelect.value) {
         loadDSDivisions(districtSelect.value, selectedDS);
     }
+	
 </script>
 </body>
 </html>
