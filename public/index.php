@@ -220,12 +220,23 @@ $offices = $conn->query("SELECT DISTINCT office_name FROM projects WHERE approva
                                 </div>
                             </div>
                         </div>
-                        <div class="card-footer bg-white border-top-0">
-                            <!-- Link to detailed view (not implemented in this task but user requested "view project") -->
-                            <!-- We can just toggle a modal or something, but for now just the card is good info -->
-                             <button class="btn btn-outline-primary w-100" type="button" data-bs-toggle="collapse" data-bs-target="#details-<?php echo $pid; ?>">
-                                <?php echo $lang['view_details']; ?>
-                            </button>
+<div class="card-footer bg-white border-top-0">
+    <button class="btn btn-outline-primary w-100 mb-2" type="button" data-bs-toggle="collapse" data-bs-target="#details-<?php echo $pid; ?>">
+        <?php echo $lang['view_details']; ?>
+    </button>
+
+    <?php if (!empty($row['boq_file'])): ?>
+        <?php $pdf_link = str_replace("../../", "../", $row['boq_file']); ?>
+        <a href="<?php echo $pdf_link; ?>" target="_blank" class="btn btn-sm btn-outline-danger w-100 d-flex align-items-center justify-content-center mb-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-pdf-fill me-2" viewBox="0 0 16 16">
+                <path d="M5.523 12.424c.147 0 .241-.045.321-.125.08-.08.118-.18.118-.312V11h.7c.43 0 .715-.242.715-.641 0-.322-.166-.518-.582-.518h-.833V12.424zM8.488 12.01c.747 0 1.14-.51 1.14-1.281 0-.79-.414-1.291-1.17-1.291H7.61V12.01h.878z"/>
+                <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z"/>
+            </svg>
+            <?php echo $lang['view_boq'] ?? 'View BOQ PDF'; ?>
+        </a>
+    <?php endif; ?>
+
+			
                              <div class="collapse mt-2" id="details-<?php echo $pid; ?>">
                                 <ul class="list-group list-group-flush small">
                                     <li class="list-group-item"><strong><?php echo $lang['contractor']; ?>:</strong> <?php echo $row['contractor_name']; ?></li>
@@ -251,22 +262,7 @@ $offices = $conn->query("SELECT DISTINCT office_name FROM projects WHERE approva
 
 
 
-<?php if (!empty($row['boq_file'])): ?>
-    <?php 
-        // Admin එකේ සේව් වෙන්නේ ../../uploads/projects/ID/file.pdf විදියට
-        // ඒක පබ්ලික් පෝටල් එකට ගැලපෙන්න ../uploads/... විදියට හදනවා
-        $pdf_link = str_replace("../../", "../", $row['boq_file']); 
-    ?>
-    <div class="px-3 mb-2">
-        <a href="<?php echo $pdf_link; ?>" target="_blank" class="btn btn-sm btn-outline-danger w-100 d-flex align-items-center justify-content-center">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-pdf-fill me-2" viewBox="0 0 16 16">
-                <path d="M5.523 12.424c.147 0 .241-.045.321-.125.08-.08.118-.18.118-.312V11h.7c.43 0 .715-.242.715-.641 0-.322-.166-.518-.582-.518h-.833V12.424zM8.488 12.01c.747 0 1.14-.51 1.14-1.281 0-.79-.414-1.291-1.17-1.291H7.61V12.01h.878z"/>
-                <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z"/>
-            </svg>
-            <?php echo $lang['view_boq'] ?? 'View BOQ PDF'; ?>
-        </a>
-    </div>
-<?php endif; ?>
+
 
 
 
