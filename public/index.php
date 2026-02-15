@@ -160,35 +160,33 @@ $offices = $conn->query("SELECT DISTINCT office_name FROM projects WHERE approva
     <input type="hidden" id="selected_gn" value="<?php echo $gn_filter; ?>">
 
     <!-- Project Grid -->
-    <div class="row">
-        <?php if ($result->num_rows > 0): ?>
-            <?php while($row = $result->fetch_assoc()): ?>
-                <div class="col-md-4 mb-4">
-                    <div class="card project-card h-100">
-                        <?php 
-                        // Find first photo
+<div class="row">
+    <?php if ($result->num_rows > 0): ?>
+        <?php while($row = $result->fetch_assoc()): ?>
+            <div class="col-md-4 mb-4">
+                <div class="card project-card h-100">
+                    <?php 
+                    // පින්තූරය සෙවීමේ සහ Path එක සැකසීමේ කොටස
+                    $thumb = "https://via.placeholder.com/400x200?text=No+Image";
+                    $pid = $row['id'];
+                    $p_res = $conn->query("SELECT photo_path FROM project_photos WHERE project_id=$pid LIMIT 1");
 
-<?php 
-// පින්තූරය සෙවීමේ කොටස
-$thumb = "https://via.placeholder.com/400x200?text=No+Image";
-$pid = $row['id'];
-$p_res = $conn->query("SELECT photo_path FROM project_photos WHERE project_id=$pid LIMIT 1");
+                    if ($p_res->num_rows > 0) {
+                        $p_row = $p_res->fetch_assoc();
+                        $saved_path = $p_row['photo_path']; 
+                        // Admin එකෙන් වැටෙන ../../uploads කෑල්ල අයින් කරලා public එකට ගැලපෙන ../ එක දානවා
+                        $clean_path = str_replace("../../", "", $saved_path);
+                        $thumb = "../" . $clean_path; 
+                    }
+                    ?>
+                    
+                    <img src="<?php echo $thumb; ?>" 
+                         class="card-img-top" 
+                         alt="Project Image" 
+                         style="height: 200px; object-fit: cover;"
+                         onerror="this.src='https://via.placeholder.com/400x200?text=Photo+Error'">
 
-if ($p_res->num_rows > 0) {
-    $p_row = $p_res->fetch_assoc();
-    $saved_path = $p_row['photo_path']; 
-    $clean_path = str_replace("../../", "", $saved_path);
-    $thumb = "../" . $clean_path; 
-}
-?>
-<img src="<?php echo $thumb; ?>" 
-     class="card-img-top" 
-     alt="Project Image" 
-     style="height: 200px; object-fit: cover;"
-     onerror="this.src='https://via.placeholder.com/400x200?text=Photo+Link+Error'">
-
-                        <img src="<?php echo $thumb; ?>" class="card-img-top" alt="Project Image" style="height: 200px; object-fit: cover;">
-                        <div class="card-body">
+                   <div class="card-body">
                             <span class="badge bg-secondary mb-2"><?php echo $row['type_name']; ?></span>
                             <?php if($row['delay_status'] == 'Delayed'): ?>
                                 <span class="badge bg-danger mb-2"><?php echo $lang['delayed']; ?></span>
