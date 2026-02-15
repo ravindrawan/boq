@@ -15,19 +15,28 @@ if (isset($_GET['approve'])) {
     echo "<script>alert('Project Approved!'); window.location='approvals.php';</script>";
 }
 
+
+
 $office = $_SESSION['office_name'];
-$sql = "SELECT p.*, t.type_name, u.username as created_by 
+$sql = "SELECT p.*, t.type_name, ANY_VALUE(u.username) as created_by 
         FROM projects p 
         LEFT JOIN project_types t ON p.project_type_id = t.id 
         LEFT JOIN users u ON p.office_name = u.office_name 
         WHERE p.approval_status = 'pending'";
 
 if ($_SESSION['role'] !== 'admin') {
-    $sql .= " AND p.office_name = '$office'";
+    // SQL Injection වලින් බේරෙන්න escape කරන්න (optional but recommended)
+    $office_escaped = $conn->real_escape_string($office);
+    $sql .= " AND p.office_name = '$office_escaped'";
 }
-$sql .= " GROUP BY p.id ORDER BY p.id DESC"; // Group by to avoid duplicate rows from user join if multiple users in office
+$sql .= " GROUP BY p.id ORDER BY p.id DESC";
+
+// SQL mode එකත් මාරු කරමු safe වෙන්න (ඔයා index.php එකේ කළා වගේමයි)
+$conn->query("SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''))");
 
 $result = $conn->query($sql);
+
+
 ?>
 
 <div class="container mt-4">
