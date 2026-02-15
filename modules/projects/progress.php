@@ -14,22 +14,26 @@ $sql = "SELECT * FROM projects WHERE id = $id";
 $result = $conn->query($sql);
 $project = $result->fetch_assoc();
 
+
+
 // Handle Updates
 if (isset($_POST['update_progress'])) {
     $phy = $_POST['physical_progress'];
     $fin = $_POST['financial_progress'];
     $status = $_POST['delay_status'];
-    $reason = $_POST['delay_reason'];
+    $reason = $conn->real_escape_string($_POST['delay_reason']);
     $ext_date = $_POST['extended_date'];
+
+   $ext_date_value = (!empty($ext_date)) ? "'$ext_date'" : "NULL";
 
     $sql = "UPDATE projects SET 
             physical_progress = '$phy',
             financial_progress = '$fin',
             delay_status = '$status',
             delay_reason = '$reason',
-            extended_date = '$ext_date'
+            extended_date = $ext_date_value 
             WHERE id = $id";
-    
+  
     if ($conn->query($sql) === TRUE) {
         // Handle New Photos
         if (!empty($_FILES["new_photos"]["name"][0])) {
@@ -129,3 +133,4 @@ $photos = $conn->query("SELECT * FROM project_photos WHERE project_id = $id ORDE
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+
