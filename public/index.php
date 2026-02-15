@@ -12,6 +12,8 @@ include "../lang/$curr_lang.php";
 // Filter Handling
 $district_filter = isset($_GET['district']) ? $_GET['district'] : '';
 $ds_filter = isset($_GET['ds_division']) ? $_GET['ds_division'] : '';
+$gn_filter = isset($_GET['gn_division']) ? $_GET['gn_division'] : '';
+$office_filter = isset($_GET['office']) ? $_GET['office'] : '';
 $status_filter = isset($_GET['status']) ? $_GET['status'] : '';
 $search = isset($_GET['search']) ? $_GET['search'] : '';
 
@@ -27,6 +29,12 @@ if ($district_filter) {
 }
 if ($ds_filter) {
     $sql .= " AND p.ds_division = '$ds_filter'";
+}
+if ($gn_filter) {
+    $sql .= " AND p.gn_division = '$gn_filter'";
+}
+if ($office_filter) {
+    $sql .= " AND p.office_name = '$office_filter'";
 }
 if ($status_filter) {
     if ($status_filter == 'Delayed') {
@@ -46,6 +54,7 @@ $result = $conn->query($sql);
 
 // Get Districts for Filter
 $districts = $conn->query("SELECT DISTINCT district FROM projects WHERE approval_status = 'approved'");
+$offices = $conn->query("SELECT DISTINCT office_name FROM projects WHERE approval_status = 'approved'");
 ?>
 
 <!DOCTYPE html>
@@ -83,12 +92,23 @@ $districts = $conn->query("SELECT DISTINCT district FROM projects WHERE approval
         <form class="row g-3" id="filterForm">
             <input type="hidden" name="lang" value="<?php echo $curr_lang; ?>">
             
-            <div class="col-md-3">
+            <div class="col-md-4">
                 <label class="form-label small fw-bold text-muted"><?php echo $lang['search']; ?></label>
                 <input type="text" name="search" class="form-control" placeholder="Project or Contractor" value="<?php echo $search; ?>">
             </div>
 
-            <div class="col-md-3">
+            <div class="col-md-2">
+                <label class="form-label small fw-bold text-muted">Office</label>
+                <select name="office" class="form-select">
+                    <option value="">All Offices</option>
+                    <?php while($o = $offices->fetch_assoc()) {
+                        $sel = ($office_filter == $o['office_name']) ? 'selected' : '';
+                        echo "<option value='{$o['office_name']}' $sel>{$o['office_name']}</option>";
+                    } ?>
+                </select>
+            </div>
+
+            <div class="col-md-2">
                 <label class="form-label small fw-bold text-muted">District</label>
                 <select name="district" id="district" class="form-select">
                     <option value="">All Districts</option>
@@ -99,7 +119,7 @@ $districts = $conn->query("SELECT DISTINCT district FROM projects WHERE approval
                 </select>
             </div>
 
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label small fw-bold text-muted">DS Division</label>
                 <select name="ds_division" id="ds_division" class="form-select">
                     <option value="">All Divisions</option>
@@ -107,7 +127,15 @@ $districts = $conn->query("SELECT DISTINCT district FROM projects WHERE approval
                 </select>
             </div>
 
-            <div class="col-md-3">
+            <div class="col-md-2">
+                <label class="form-label small fw-bold text-muted">GN Division</label>
+                <select name="gn_division" id="gn_division" class="form-select">
+                    <option value="">All GN Divisions</option>
+                    <!-- Populated via JS -->
+                </select>
+            </div>
+
+            <div class="col-md-2">
                 <label class="form-label small fw-bold text-muted">Status</label>
                 <select name="status" class="form-select">
                     <option value="">All Statuses</option>
@@ -126,6 +154,7 @@ $districts = $conn->query("SELECT DISTINCT district FROM projects WHERE approval
 
     <!-- Hidden input to store selected DS for JS re-selection after load -->
     <input type="hidden" id="selected_ds" value="<?php echo $ds_filter; ?>">
+    <input type="hidden" id="selected_gn" value="<?php echo $gn_filter; ?>">
 
     <!-- Project Grid -->
     <div class="row">
@@ -194,6 +223,8 @@ $districts = $conn->query("SELECT DISTINCT district FROM projects WHERE approval
                              <div class="collapse mt-2" id="details-<?php echo $pid; ?>">
                                 <ul class="list-group list-group-flush small">
                                     <li class="list-group-item"><strong><?php echo $lang['contractor']; ?>:</strong> <?php echo $row['contractor_name']; ?></li>
+                                    <li class="list-group-item"><strong>Contract Amount:</strong> Rs. <?php echo number_format($row['contract_amount'], 2); ?></li>
+                                    <li class="list-group-item"><strong>Office:</strong> <?php echo $row['office_name']; ?></li>
                                     <li class="list-group-item"><strong>Start:</strong> <?php echo $row['start_date']; ?></li>
                                     <li class="list-group-item"><strong>End:</strong> <?php echo $row['completion_date']; ?></li>
                                     <?php if($row['delay_reason']): ?>
@@ -223,7 +254,9 @@ $districts = $conn->query("SELECT DISTINCT district FROM projects WHERE approval
 <script>
     const districtSelect = document.getElementById('district');
     const dsSelect = document.getElementById('ds_division');
+    const gnSelect = document.getElementById('gn_division');
     const selectedDS = document.getElementById('selected_ds').value;
+    const selectedGN = document.getElementById('selected_gn').value;
 
     function loadDSDivisions(district, selected = '') {
         dsSelect.innerHTML = '<option value="">Loading...</option>';
@@ -243,12 +276,43 @@ $districts = $conn->query("SELECT DISTINCT district FROM projects WHERE approval
                     if (d === selected) option.selected = true;
                     dsSelect.appendChild(option);
                 });
+                
+                // Trigger GN load if DS is selected (e.g. on page load)
+                if(selected) {
+                    loadGNDivisions(selected, selectedGN);
+                }
+            });
+    }
+
+    function loadGNDivisions(ds, selected = '') {
+        gnSelect.innerHTML = '<option value="">Loading...</option>';
+        if(!ds) {
+            gnSelect.innerHTML = '<option value="">All GN Divisions</option>';
+            return;
+        }
+
+        fetch('../api/get_locations.php?type=gn&ds=' + ds)
+            .then(response => response.json())
+            .then(data => {
+                gnSelect.innerHTML = '<option value="">All GN Divisions</option>';
+                data.forEach(g => {
+                    const option = document.createElement('option');
+                    option.value = g;
+                    option.textContent = g;
+                    if (g === selected) option.selected = true;
+                    gnSelect.appendChild(option);
+                });
             });
     }
 
     // Load on change
     districtSelect.addEventListener('change', function() {
         loadDSDivisions(this.value);
+        gnSelect.innerHTML = '<option value="">All GN Divisions</option>'; // Reset GN
+    });
+
+    dsSelect.addEventListener('change', function() {
+        loadGNDivisions(this.value);
     });
 
     // Load on init if district is selected
