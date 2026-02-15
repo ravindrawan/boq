@@ -167,21 +167,26 @@ $offices = $conn->query("SELECT DISTINCT office_name FROM projects WHERE approva
                     <div class="card project-card h-100">
                         <?php 
                         // Find first photo
-                        $thumb = "https://via.placeholder.com/400x200?text=No+Image";
-                        $pid = $row['id'];
-                        $p_res = $conn->query("SELECT photo_path FROM project_photos WHERE project_id=$pid LIMIT 1");
-                        if ($p_res->num_rows > 0) {
-                            $p_row = $p_res->fetch_assoc();
-                            $thumb = $p_row['photo_path']; // Relative path needs adjustment if public is root
-                            // Current path structure: ../../uploads/.. we need to act as if we are in public/
-                            // If photo_path is saved as ../../uploads/.., and we are in public/, we need ../uploads
-                            // Actually, photo_path is saved relative to modules/projects/add.php likely.
-                            // Let's check saved path. It's saved as `../../uploads/projects/...`
-                            // If we are in public/index.php, `../../uploads` goes to c:\xampp\htdocs\uploads which is wrong.
-                            // We need `../uploads`.
-                            $thumb = str_replace("../../", "../", $thumb); 
-                        }
-                        ?>
+
+<?php 
+// පින්තූරය සෙවීමේ කොටස
+$thumb = "https://via.placeholder.com/400x200?text=No+Image";
+$pid = $row['id'];
+$p_res = $conn->query("SELECT photo_path FROM project_photos WHERE project_id=$pid LIMIT 1");
+
+if ($p_res->num_rows > 0) {
+    $p_row = $p_res->fetch_assoc();
+    $saved_path = $p_row['photo_path']; 
+    $clean_path = str_replace("../../", "", $saved_path);
+    $thumb = "../" . $clean_path; 
+}
+?>
+<img src="<?php echo $thumb; ?>" 
+     class="card-img-top" 
+     alt="Project Image" 
+     style="height: 200px; object-fit: cover;"
+     onerror="this.src='https://via.placeholder.com/400x200?text=Photo+Link+Error'">
+
                         <img src="<?php echo $thumb; ?>" class="card-img-top" alt="Project Image" style="height: 200px; object-fit: cover;">
                         <div class="card-body">
                             <span class="badge bg-secondary mb-2"><?php echo $row['type_name']; ?></span>
