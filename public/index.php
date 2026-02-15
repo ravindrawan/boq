@@ -1,6 +1,7 @@
 <?php
 session_start();
 include '../includes/db_connect.php';
+$conn->query("SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''))");
 
 // Language Handling
 if (isset($_GET['lang'])) {
@@ -21,7 +22,10 @@ $sql = "SELECT p.*, t.type_name, f.photo_path
         FROM projects p 
         LEFT JOIN project_types t ON p.project_type_id = t.id 
         LEFT JOIN (SELECT project_id, ANY_VALUE(photo_path) as photo_path FROM project_photos GROUP BY project_id) f ON p.id = f.project_id
-        WHERE p.approval_status = 'approved'";
+        WHERE p.approval_status = 'approved'";		
+		
+		
+		
 
 if ($district_filter) {
     $sql .= " AND p.district = '$district_filter'";
