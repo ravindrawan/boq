@@ -1,7 +1,6 @@
 <?php
 session_start();
 include '../includes/db_connect.php';
-$conn->query("SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''))");
 
 // Language Handling
 if (isset($_GET['lang'])) {
@@ -13,19 +12,16 @@ include "../lang/$curr_lang.php";
 // Filter Handling
 $district_filter = isset($_GET['district']) ? $_GET['district'] : '';
 $ds_filter = isset($_GET['ds_division']) ? $_GET['ds_division'] : '';
-$gn_filter = isset($_GET['gn_division']) ? $_GET['gn_division'] : '';
 $office_filter = isset($_GET['office']) ? $_GET['office'] : '';
 $status_filter = isset($_GET['status']) ? $_GET['status'] : '';
 $search = isset($_GET['search']) ? $_GET['search'] : '';
 
+// Build Query
 $sql = "SELECT p.*, t.type_name, f.photo_path 
         FROM projects p 
         LEFT JOIN project_types t ON p.project_type_id = t.id 
-        LEFT JOIN (SELECT project_id, ANY_VALUE(photo_path) as photo_path FROM project_photos GROUP BY project_id) f ON p.id = f.project_id
-        WHERE p.approval_status = 'approved'";		
-		
-		
-		
+        LEFT JOIN (SELECT project_id, photo_path FROM project_photos GROUP BY project_id) f ON p.id = f.project_id
+        WHERE p.approval_status = 'approved'";
 
 if ($district_filter) {
     $sql .= " AND p.district = '$district_filter'";
@@ -33,9 +29,7 @@ if ($district_filter) {
 if ($ds_filter) {
     $sql .= " AND p.ds_division = '$ds_filter'";
 }
-if ($gn_filter) {
-    $sql .= " AND p.gn_division = '$gn_filter'";
-}
+
 if ($office_filter) {
     $sql .= " AND p.office_name = '$office_filter'";
 }
@@ -131,14 +125,6 @@ $offices = $conn->query("SELECT DISTINCT office_name FROM projects WHERE approva
             </div>
 
             <div class="col-md-2">
-                <label class="form-label small fw-bold text-muted">GN Division</label>
-                <select name="gn_division" id="gn_division" class="form-select">
-                    <option value="">All GN Divisions</option>
-                    <!-- Populated via JS -->
-                </select>
-            </div>
-
-            <div class="col-md-2">
                 <label class="form-label small fw-bold text-muted">Status</label>
                 <select name="status" class="form-select">
                     <option value="">All Statuses</option>
@@ -157,36 +143,32 @@ $offices = $conn->query("SELECT DISTINCT office_name FROM projects WHERE approva
 
     <!-- Hidden input to store selected DS for JS re-selection after load -->
     <input type="hidden" id="selected_ds" value="<?php echo $ds_filter; ?>">
-    <input type="hidden" id="selected_gn" value="<?php echo $gn_filter; ?>">
 
     <!-- Project Grid -->
-<div class="row">
-    <?php if ($result->num_rows > 0): ?>
-        <?php while($row = $result->fetch_assoc()): ?>
-            <div class="col-md-4 mb-4">
-                <div class="card project-card h-100">
-                    <?php 
-                    // පින්තූරය සෙවීමේ සහ Path එක සැකසීමේ කොටස
-                    $thumb = "https://via.placeholder.com/400x200?text=No+Image";
-                    $pid = $row['id'];
-                    $p_res = $conn->query("SELECT photo_path FROM project_photos WHERE project_id=$pid LIMIT 1");
-
-                    if ($p_res->num_rows > 0) {
-                        $p_row = $p_res->fetch_assoc();
-                        $saved_path = $p_row['photo_path']; 
-                        // Admin එකෙන් වැටෙන ../../uploads කෑල්ල අයින් කරලා public එකට ගැලපෙන ../ එක දානවා
-                        $clean_path = str_replace("../../", "", $saved_path);
-                        $thumb = "../" . $clean_path; 
-                    }
-                    ?>
-                    
-                    <img src="<?php echo $thumb; ?>" 
-                         class="card-img-top" 
-                         alt="Project Image" 
-                         style="height: 200px; object-fit: cover;"
-                         onerror="this.src='https://via.placeholder.com/400x200?text=Photo+Error'">
-
-                   <div class="card-body">
+    <div class="row">
+        <?php if ($result->num_rows > 0): ?>
+            <?php while($row = $result->fetch_assoc()): ?>
+                <div class="col-md-4 mb-4">
+                    <div class="card project-card h-100">
+                        <?php 
+                        // Find first photo
+                        $thumb = "https://via.placeholder.com/400x200?text=No+Image";
+                        $pid = $row['id'];
+                        $p_res = $conn->query("SELECT photo_path FROM project_photos WHERE project_id=$pid LIMIT 1");
+                        if ($p_res->num_rows > 0) {
+                            $p_row = $p_res->fetch_assoc();
+                            $thumb = $p_row['photo_path']; // Relative path needs adjustment if public is root
+                            // Current path structure: ../../uploads/.. we need to act as if we are in public/
+                            // If photo_path is saved as ../../uploads/.., and we are in public/, we need ../uploads
+                            // Actually, photo_path is saved relative to modules/projects/add.php likely.
+                            // Let's check saved path. It's saved as `../../uploads/projects/...`
+                            // If we are in public/index.php, `../../uploads` goes to c:\xampp\htdocs\uploads which is wrong.
+                            // We need `../uploads`.
+                            $thumb = str_replace("../../", "../", $thumb); 
+                        }
+                        ?>
+                        <img src="<?php echo $thumb; ?>" class="card-img-top" alt="Project Image" style="height: 200px; object-fit: cover;">
+                        <div class="card-body">
                             <span class="badge bg-secondary mb-2"><?php echo $row['type_name']; ?></span>
                             <?php if($row['delay_status'] == 'Delayed'): ?>
                                 <span class="badge bg-danger mb-2"><?php echo $lang['delayed']; ?></span>
@@ -209,34 +191,14 @@ $offices = $conn->query("SELECT DISTINCT office_name FROM projects WHERE approva
                                         <div class="progress-bar bg-primary" role="progressbar" style="width: <?php echo $row['physical_progress']; ?>%"></div>
                                     </div>
                                 </div>
-                                <div>
-                                    <div class="d-flex justify-content-between small text-muted mb-1">
-                                        <span><?php echo $lang['fin_progress']; ?></span>
-                                        <span><?php echo $row['financial_progress']; ?>%</span>
-                                    </div>
-                                    <div class="progress" style="height: 6px;">
-                                        <div class="progress-bar bg-success" role="progressbar" style="width: <?php echo $row['financial_progress']; ?>%"></div>
-                                    </div>
-                                </div>
                             </div>
                         </div>
-<div class="card-footer bg-white border-top-0">
-    <button class="btn btn-outline-primary w-100 mb-2" type="button" data-bs-toggle="collapse" data-bs-target="#details-<?php echo $pid; ?>">
-        <?php echo $lang['view_details']; ?>
-    </button>
-
-    <?php if (!empty($row['boq_file'])): ?>
-        <?php $pdf_link = str_replace("../../", "../", $row['boq_file']); ?>
-        <a href="<?php echo $pdf_link; ?>" target="_blank" class="btn btn-sm btn-outline-danger w-100 d-flex align-items-center justify-content-center mb-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-pdf-fill me-2" viewBox="0 0 16 16">
-                <path d="M5.523 12.424c.147 0 .241-.045.321-.125.08-.08.118-.18.118-.312V11h.7c.43 0 .715-.242.715-.641 0-.322-.166-.518-.582-.518h-.833V12.424zM8.488 12.01c.747 0 1.14-.51 1.14-1.281 0-.79-.414-1.291-1.17-1.291H7.61V12.01h.878z"/>
-                <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z"/>
-            </svg>
-            <?php echo $lang['view_boq'] ?? 'View BOQ PDF'; ?>
-        </a>
-    <?php endif; ?>
-
-			
+                        <div class="card-footer bg-white border-top-0">
+                            <!-- Link to detailed view (not implemented in this task but user requested "view project") -->
+                            <!-- We can just toggle a modal or something, but for now just the card is good info -->
+                             <button class="btn btn-outline-primary w-100" type="button" data-bs-toggle="collapse" data-bs-target="#details-<?php echo $pid; ?>">
+                                <?php echo $lang['view_details']; ?>
+                            </button>
                              <div class="collapse mt-2" id="details-<?php echo $pid; ?>">
                                 <ul class="list-group list-group-flush small">
                                     <li class="list-group-item"><strong><?php echo $lang['contractor']; ?>:</strong> <?php echo $row['contractor_name']; ?></li>
@@ -259,20 +221,6 @@ $offices = $conn->query("SELECT DISTINCT office_name FROM projects WHERE approva
             </div>
         <?php endif; ?>
     </div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-	
 </div>
 
 <footer class="bg-light text-center text-muted py-3 mt-auto border-top" style="height: 60px; display: flex; align-items: center; justify-content: center;">
@@ -285,9 +233,7 @@ $offices = $conn->query("SELECT DISTINCT office_name FROM projects WHERE approva
 <script>
     const districtSelect = document.getElementById('district');
     const dsSelect = document.getElementById('ds_division');
-    const gnSelect = document.getElementById('gn_division');
     const selectedDS = document.getElementById('selected_ds').value;
-    const selectedGN = document.getElementById('selected_gn').value;
 
     function loadDSDivisions(district, selected = '') {
         dsSelect.innerHTML = '<option value="">Loading...</option>';
@@ -308,49 +254,27 @@ $offices = $conn->query("SELECT DISTINCT office_name FROM projects WHERE approva
                     dsSelect.appendChild(option);
                 });
                 
-                // Trigger GN load if DS is selected (e.g. on page load)
+                // Trigger DS load if selected (e.g. on page load)
                 if(selected) {
-                    loadGNDivisions(selected, selectedGN);
+                    // Nothing to chain further since GN division is removed
                 }
             });
     }
 
-    function loadGNDivisions(ds, selected = '') {
-        gnSelect.innerHTML = '<option value="">Loading...</option>';
-        if(!ds) {
-            gnSelect.innerHTML = '<option value="">All GN Divisions</option>';
-            return;
-        }
-
-        fetch('../api/get_locations.php?type=gn&ds=' + ds)
-            .then(response => response.json())
-            .then(data => {
-                gnSelect.innerHTML = '<option value="">All GN Divisions</option>';
-                data.forEach(g => {
-                    const option = document.createElement('option');
-                    option.value = g;
-                    option.textContent = g;
-                    if (g === selected) option.selected = true;
-                    gnSelect.appendChild(option);
-                });
-            });
-    }
 
     // Load on change
     districtSelect.addEventListener('change', function() {
         loadDSDivisions(this.value);
-        gnSelect.innerHTML = '<option value="">All GN Divisions</option>'; // Reset GN
     });
 
     dsSelect.addEventListener('change', function() {
-        loadGNDivisions(this.value);
+        // Handle DS change if needed
     });
 
     // Load on init if district is selected
     if (districtSelect.value) {
         loadDSDivisions(districtSelect.value, selectedDS);
     }
-	
 </script>
 </body>
 </html>
