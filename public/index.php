@@ -146,6 +146,20 @@ $offices = $conn->query("SELECT DISTINCT office_name FROM projects WHERE approva
 
     <!-- Project Grid -->
     <div class="row">
+
+$result = $conn->query($sql);
+
+if (!$result) {
+    // මේකෙන් SQL එකේ තියෙන ඇත්තම වැරද්ද පෙන්වයි
+    die("SQL Error: " . $conn->error . " | Query: " . $sql);
+}
+
+if ($result->num_rows > 0) {
+    // ... ඉතිරි code එක
+}
+2. D
+
+        
         <?php if ($result->num_rows > 0): ?>
             <?php while($row = $result->fetch_assoc()): ?>
                 <div class="col-md-4 mb-4">
