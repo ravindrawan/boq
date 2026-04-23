@@ -11,7 +11,9 @@ if (isset($_POST['login'])) {
 
     if ($result->num_rows > 0) {
         $row = $result->fetch_assoc();
-        if (password_verify($pass, $row['password']) || $pass == '123') { 
+        if ($row['is_active'] == 0) {
+            $error = "ඔබගේ ගිණුම අක්‍රීය කර ඇත. කරුණාකර පරිපාලක අමතන්න.";
+        } else if (password_verify($pass, $row['password']) || $pass == '123') { 
             $_SESSION['user_id'] = $row['id'];
             $_SESSION['username'] = $row['username'];
             $_SESSION['role'] = $row['role'];

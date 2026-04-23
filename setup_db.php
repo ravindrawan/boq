@@ -48,7 +48,6 @@ $sql = "CREATE TABLE projects (
     estimate_cost DECIMAL(15, 2),
     funding_source_id INT(11),
     physical_progress INT(11) DEFAULT 0,
-    financial_progress INT(11) DEFAULT 0,
     delay_status ENUM('None', 'Delayed') DEFAULT 'None',
     delay_reason TEXT,
     extended_date DATE,
