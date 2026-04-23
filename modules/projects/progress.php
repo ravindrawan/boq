@@ -19,7 +19,6 @@ $project = $result->fetch_assoc();
 // Handle Updates
 if (isset($_POST['update_progress'])) {
     $phy = $_POST['physical_progress'];
-    $fin = $_POST['financial_progress'];
     $status = $_POST['delay_status'];
     $reason = $conn->real_escape_string($_POST['delay_reason']);
     $ext_date = $_POST['extended_date'];
@@ -28,7 +27,6 @@ if (isset($_POST['update_progress'])) {
 
     $sql = "UPDATE projects SET 
             physical_progress = '$phy',
-            financial_progress = '$fin',
             delay_status = '$status',
             delay_reason = '$reason',
             extended_date = $ext_date_value 
@@ -70,11 +68,7 @@ $photos = $conn->query("SELECT * FROM project_photos WHERE project_id = $id ORDE
                         <input type="range" class="form-range" min="0" max="100" step="1" name="physical_progress" value="<?php echo $project['physical_progress']; ?>" oninput="this.nextElementSibling.value = this.value">
                         <output><?php echo $project['physical_progress']; ?></output>%
                     </div>
-                    <div class="mb-3">
-                        <label>Financial Progress (%)</label>
-                        <input type="range" class="form-range" min="0" max="100" step="1" name="financial_progress" value="<?php echo $project['financial_progress']; ?>" oninput="this.nextElementSibling.value = this.value">
-                        <output><?php echo $project['financial_progress']; ?></output>%
-                    </div>
+
                     
                     <hr>
                     

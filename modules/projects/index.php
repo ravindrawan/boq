@@ -27,7 +27,7 @@ if (isset($_GET['delete'])) {
                         <th>Type</th>
                         <th>Location (District / DS / GN)</th>
                         <th>Contractor</th>
-                        <th>Completion % (Phy / Fin)</th>
+                        <th>Completion % (Physical)</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
@@ -49,7 +49,51 @@ if (isset($_GET['delete'])) {
                     $result = $conn->query($sql);
 
                     if ($result->num_rows > 0) {
+                        $modals = "";
                         while ($row = $result->fetch_assoc()) {
+                            $cost = number_format($row['contract_amount'], 2);
+                            $est = number_format($row['estimate_cost'], 2);
+                            $modals .= "
+                            <div class='modal fade' id='projectModal{$row['id']}' tabindex='-1' aria-hidden='true'>
+                              <div class='modal-dialog modal-lg'>
+                                <div class='modal-content text-start'>
+                                  <div class='modal-header'>
+                                    <h5 class='modal-title text-primary'>Project Details: {$row['project_name']}</h5>
+                                    <button type='button' class='btn-close' data-bs-dismiss='modal' aria-label='Close'></button>
+                                  </div>
+                                  <div class='modal-body'>
+                                    <div class='row'>
+                                        <div class='col-md-6'>
+                                            <p><strong>Type:</strong> {$row['type_name']}</p>
+                                            <p><strong>Location:</strong> {$row['district']} &gt; {$row['ds_division']} &gt; {$row['gn_division']}</p>
+                                            <p><strong>Office:</strong> {$row['office_name']}</p>
+                                        </div>
+                                        <div class='col-md-6'>
+                                            <p><strong>Contractor:</strong> {$row['contractor_name']}</p>
+                                            <p><strong>CIDA Reg No:</strong> {$row['cida_reg_no']}</p>
+                                            <p><strong>Agreement No:</strong> {$row['agreement_no']}</p>
+                                        </div>
+                                    </div>
+                                    <hr>
+                                    <div class='row'>
+                                        <div class='col-md-6'>
+                                            <p><strong>Start Date:</strong> {$row['start_date']}</p>
+                                            <p><strong>Completion Date:</strong> {$row['completion_date']}</p>
+                                        </div>
+                                        <div class='col-md-6'>
+                                            <p><strong>Contract Amount:</strong> Rs. {$cost}</p>
+                                            <p><strong>Estimate Cost:</strong> Rs. {$est}</p>
+                                        </div>
+                                    </div>
+                                  </div>
+                                  <div class='modal-footer'>
+                                    <button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Close</button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            ";
+                            
                             $delay_badge = ($row['delay_status'] == 'Delayed') ? 
                                 '<span class="badge bg-danger">Delayed</span>' : 
                                 '<span class="badge bg-success">On Time</span>';
@@ -57,7 +101,9 @@ if (isset($_GET['delete'])) {
                             echo "<tr>
                                 <td>{$row['id']}</td>
                                 <td class='fw-bold'>
-                                    {$row['project_name']}
+                                    <a href='#' class='text-decoration-none' data-bs-toggle='modal' data-bs-target='#projectModal{$row['id']}'>
+                                        {$row['project_name']}
+                                    </a>
                                     ";
                                     if($row['approval_status'] == 'pending'):
                                         echo "<span class=\"badge bg-warning text-dark\">Pending Approval</span>";
@@ -75,7 +121,6 @@ if (isset($_GET['delete'])) {
                                 </td>
                                 <td>
                                     <div class='mb-1'>Phy: <div class='progress' style='height: 6px; width: 100px; display: inline-flex;'><div class='progress-bar' role='progressbar' style='width: {$row['physical_progress']}%'></div></div> {$row['physical_progress']}%</div>
-                                    <div>Fin: <div class='progress' style='height: 6px; width: 100px; display: inline-flex;'><div class='progress-bar bg-info' role='progressbar' style='width: {$row['financial_progress']}%'></div></div> {$row['financial_progress']}%</div>
                                 </td>
                                 <td>$delay_badge</td>
                                 <td>
@@ -93,6 +138,7 @@ if (isset($_GET['delete'])) {
                     ?>
                 </tbody>
             </table>
+            <?php if(isset($modals)) echo $modals; ?>
         </div>
     </div>
 </div>
