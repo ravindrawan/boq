@@ -1,0 +1,49 @@
+:root {
+  --primary-color: #4f46e5; /* Default Blue */
+  --secondary-color: #6b7280;
+  --bg-color: #f3f4f6;
+  --card-bg: #ffffff;
+  --text-color: #1f2937;
+}
+
+/* Themes */
+body.theme-blue {
+  --primary-color: #3b82f6;
+} /* Blue */
+body.theme-green {
+  --primary-color: #10b981;
+} /* Emerald */
+body.theme-red {
+  --primary-color: #ef4444;
+} /* Rose */
+body.theme-purple {
+  --primary-color: #8b5cf6;
+} /* Violet */
+body.theme-orange {
+  --primary-color: #f97316;
+} /* Amber */
+body.theme-dark {
+  --primary-color: #3730a3;
+  --bg-color: #111827;
+  --card-bg: #1f2937;
+  --text-color: #f9fafb;
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+}
+.card {
+  background-color: var(--card-bg);
+  color: var(--text-color);
+}
+.navbar {
+  background-color: var(--primary-color) !important;
+}
+.btn-primary {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+.text-primary {
+  color: var(--primary-color) !important;
+}
