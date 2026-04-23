@@ -19,9 +19,24 @@
                 </li>
             </ul>
             <ul class="navbar-nav">
-                <?php if ($_SESSION['role'] === 'supervisor' || $_SESSION['role'] === 'admin'): ?>
-                <li class="nav-item"><a class="nav-link text-warning" href="../../modules/projects/approvals.php">Approvals</a></li>
+                <?php if ($_SESSION['role'] === 'supervisor' || $_SESSION['role'] === 'admin'): 
+                    $nav_office_filter = ($_SESSION['role'] !== 'admin') ? "WHERE office_name = '{$_SESSION['office_name']}' AND " : "WHERE ";
+                    $nav_pending = $conn->query("SELECT COUNT(*) as c FROM projects {$nav_office_filter} approval_status = 'pending'")->fetch_assoc()['c'];
+                ?>
+                <li class="nav-item">
+                    <a class="nav-link text-warning" href="../../modules/projects/approvals.php" style="position: relative;">
+                        Approvals 
+                        <?php if($nav_pending > 0): ?>
+                            <span class="badge bg-danger" style="animation: blinker 1.5s linear infinite;"><?php echo $nav_pending; ?></span>
+                        <?php endif; ?>
+                    </a>
+                </li>
                 <?php endif; ?>
+                <style>
+                @keyframes blinker {
+                  50% { opacity: 0.2; }
+                }
+                </style>
                 <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
                 <li class="nav-item"><a class="nav-link" href="../../modules/users/manage.php">Users</a></li>
                 <?php endif; ?>
