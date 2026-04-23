@@ -33,6 +33,10 @@ $pending_apr = $conn->query("SELECT COUNT(*) as c FROM projects $pending_filter 
         background-color: rgba(255, 255, 255, 0.85); /* White overlay with opacity */
         z-index: -1;
     }
+    .card-hover-effect:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+    }
 </style>
 <div class="overlay"></div>
 
@@ -111,8 +115,8 @@ $pending_apr = $conn->query("SELECT COUNT(*) as c FROM projects $pending_filter 
         
         <!-- Pending Approval Card -->
         <?php if($_SESSION['role'] !== 'office'): ?>
-        <div class="col-md">
-            <div class="card p-3 border-0 shadow-sm bg-white" style="border-left: 5px solid #f59e0b !important;">
+        <div class="col-md" style="cursor: pointer;" onclick="window.location.href='../projects/approvals.php';">
+            <div class="card p-3 border-0 shadow-sm bg-white card-hover-effect" style="border-left: 5px solid #f59e0b !important; transition: transform 0.2s;">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <p class="text-muted mb-1 text-uppercase small fw-bold">Pending</p>
@@ -142,7 +146,6 @@ $pending_apr = $conn->query("SELECT COUNT(*) as c FROM projects $pending_filter 
                             <th>Project</th>
                             <th>Status</th>
                             <th>Physical Progress</th>
-                            <th>Financial Progress</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -173,12 +176,6 @@ $pending_apr = $conn->query("SELECT COUNT(*) as c FROM projects $pending_filter 
                                         <div class='progress-bar bg-primary' style='width: {$r['physical_progress']}%'></div>
                                     </div>
                                     <small>{$r['physical_progress']}%</small>
-                                </td>
-                                <td>
-                                    <div class='progress' style='height: 5px; width: 80px;'>
-                                        <div class='progress-bar bg-success' style='width: {$r['financial_progress']}%'></div>
-                                    </div>
-                                    <small>{$r['financial_progress']}%</small>
                                 </td>
                             </tr>";
                         }
