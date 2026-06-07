@@ -1,20 +1,157 @@
 <?php
 include '../../includes/db_connect.php';
-include '../../includes/header.php';
-include '../../includes/navbar.php';
+include '../../includes/functions.php';
+
+// Ensure session is started
+if(session_status() === PHP_SESSION_NONE) session_start();
 
 // Handle Delete
 if (isset($_GET['delete'])) {
-    $id = $_GET['delete'];
+    $id = (int)$_GET['delete'];
     $conn->query("DELETE FROM projects WHERE id=$id");
     echo "<script>window.location='index.php';</script>";
+    exit();
 }
+
+// Filter Handling
+$search = isset($_GET['search']) ? $conn->real_escape_string($_GET['search']) : '';
+$district_filter = isset($_GET['district']) ? $conn->real_escape_string($_GET['district']) : '';
+$status_filter = isset($_GET['status']) ? $conn->real_escape_string($_GET['status']) : '';
+$funding_filter = isset($_GET['funding_source']) ? $conn->real_escape_string($_GET['funding_source']) : '';
+
+// Base WHERE clause
+$where_conditions = "1=1";
+if (isset($_SESSION['role']) && $_SESSION['role'] !== 'admin') {
+    $office = $conn->real_escape_string($_SESSION['office_name']);
+    $where_conditions .= " AND p.office_name = '$office'";
+}
+
+if ($search) {
+    $where_conditions .= " AND (p.project_name LIKE '%$search%' OR p.contractor_name LIKE '%$search%')";
+}
+if ($district_filter) {
+    $where_conditions .= " AND p.district = '$district_filter'";
+}
+if ($funding_filter) {
+    $where_conditions .= " AND p.funding_source_id = '$funding_filter'";
+}
+if ($status_filter) {
+    if ($status_filter == 'Delayed') {
+        $where_conditions .= " AND p.delay_status = 'Delayed'";
+    } elseif ($status_filter == 'Completed') {
+        $where_conditions .= " AND p.physical_progress = 100";
+    } elseif ($status_filter == 'Ongoing') {
+        $where_conditions .= " AND p.physical_progress < 100 AND p.delay_status != 'Delayed'";
+    }
+}
+
+// Export Logic
+if (isset($_GET['export'])) {
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename=projects_export_' . date('Ymd') . '.csv');
+    $output = fopen('php://output', 'w');
+    
+    // Output UTF-8 BOM to ensure Excel reads Sinhala Unicode correctly
+    fputs($output, "\xEF\xBB\xBF");
+    
+    fputcsv($output, array('ID', 'Project Name', 'Type', 'District', 'DS Division', 'GN Division', 'Contractor', 'Progress %', 'Status', 'Approval Status'));
+    
+    $export_sql = "SELECT p.*, t.type_name, c.grade_name
+            FROM projects p 
+            LEFT JOIN project_types t ON p.project_type_id = t.id 
+            LEFT JOIN cida_grades c ON p.cida_grade_id = c.id
+            WHERE $where_conditions
+            ORDER BY p.id DESC";
+            
+    $exp_res = $conn->query($export_sql);
+    while($row = $exp_res->fetch_assoc()){
+        fputcsv($output, array(
+            $row['id'], 
+            $row['project_name'], 
+            $row['type_name'], 
+            $row['district'], 
+            $row['ds_division'], 
+            $row['gn_division'], 
+            $row['contractor_name'], 
+            $row['physical_progress'], 
+            $row['delay_status'],
+            $row['approval_status']
+        ));
+    }
+    exit();
+}
+
+include '../../includes/header.php';
+include '../../includes/navbar.php';
+
+// Pagination setup
+$limit = 10;
+$page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
+if ($page < 1) $page = 1;
+$offset = ($page - 1) * $limit;
+
+$count_sql = "SELECT COUNT(p.id) as total FROM projects p WHERE $where_conditions";
+$count_result = $conn->query($count_sql);
+$total_rows = $count_result->fetch_assoc()['total'];
+$total_pages = ceil($total_rows / $limit);
+
+$funding_sources = getFundingSources($conn);
+$districts_res = $conn->query("SELECT DISTINCT district FROM projects");
 ?>
 
 <div class="container-fluid px-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 mt-2">
         <h3>Project Dashboard</h3>
-        <a href="add.php" class="btn btn-primary">+ Add New Project</a>
+        <div>
+            <?php 
+            $export_qs = $_GET;
+            $export_qs['export'] = 1;
+            unset($export_qs['page']); // Exclude pagination for export
+            ?>
+            <a href="?<?php echo http_build_query($export_qs); ?>" class="btn btn-outline-success me-2">Export CSV</a>
+            <a href="add.php" class="btn btn-primary">+ Add New Project</a>
+        </div>
+    </div>
+
+    <!-- Filter Form -->
+    <div class="card p-3 mb-4 bg-light border-0">
+        <form method="GET" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small mb-1">Search</label>
+                <input type="text" name="search" class="form-control form-control-sm" placeholder="Project or Contractor" value="<?php echo htmlspecialchars($search); ?>">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-1">District</label>
+                <select name="district" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    <?php while($d = $districts_res->fetch_assoc()): ?>
+                        <option value="<?php echo $d['district']; ?>" <?php if($district_filter == $d['district']) echo 'selected'; ?>><?php echo $d['district']; ?></option>
+                    <?php endwhile; ?>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small mb-1">Funding Source</label>
+                <select name="funding_source" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    <?php foreach($funding_sources as $fs): ?>
+                        <option value="<?php echo $fs['id']; ?>" <?php if($funding_filter == $fs['id']) echo 'selected'; ?>><?php echo $fs['source_name']; ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-1">Status</label>
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    <option value="Ongoing" <?php if($status_filter == 'Ongoing') echo 'selected'; ?>>Ongoing</option>
+                    <option value="Completed" <?php if($status_filter == 'Completed') echo 'selected'; ?>>Completed</option>
+                    <option value="Delayed" <?php if($status_filter == 'Delayed') echo 'selected'; ?>>Delayed</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex">
+                <button type="submit" class="btn btn-sm btn-primary w-100 me-1">Filter</button>
+                <a href="index.php" class="btn btn-sm btn-outline-secondary">Reset</a>
+            </div>
+        </form>
     </div>
 
     <div class="card p-4">
@@ -34,18 +171,13 @@ if (isset($_GET['delete'])) {
                 </thead>
                 <tbody>
                     <?php
-                    $where_clause = "";
-                    if ($_SESSION['role'] !== 'admin') {
-                        $office = $_SESSION['office_name'];
-                        $where_clause = "WHERE p.office_name = '$office'";
-                    }
-
                     $sql = "SELECT p.*, t.type_name, c.grade_name
                             FROM projects p 
                             LEFT JOIN project_types t ON p.project_type_id = t.id 
                             LEFT JOIN cida_grades c ON p.cida_grade_id = c.id
-                            $where_clause
-                            ORDER BY p.id DESC";
+                            WHERE $where_conditions
+                            ORDER BY p.id DESC
+                            LIMIT $limit OFFSET $offset";
                     $result = $conn->query($sql);
 
                     if ($result->num_rows > 0) {
@@ -140,6 +272,32 @@ if (isset($_GET['delete'])) {
             </table>
             <?php if(isset($modals)) echo $modals; ?>
         </div>
+        
+        <!-- Pagination Controls -->
+        <?php if ($total_pages > 1): 
+            $query_string = $_GET;
+            unset($query_string['page']);
+            $qs = http_build_query($query_string);
+            $base_url = $qs ? '?' . $qs . '&' : '?';
+        ?>
+        <nav aria-label="Page navigation" class="mt-4">
+            <ul class="pagination justify-content-center">
+                <li class="page-item <?php echo ($page <= 1) ? 'disabled' : ''; ?>">
+                    <a class="page-link" href="<?php echo $base_url . 'page=' . ($page - 1); ?>" tabindex="-1" aria-disabled="true">Previous</a>
+                </li>
+                
+                <?php for($i = 1; $i <= $total_pages; $i++): ?>
+                    <li class="page-item <?php echo ($page == $i) ? 'active' : ''; ?>">
+                        <a class="page-link" href="<?php echo $base_url . 'page=' . $i; ?>"><?php echo $i; ?></a>
+                    </li>
+                <?php endfor; ?>
+                
+                <li class="page-item <?php echo ($page >= $total_pages) ? 'disabled' : ''; ?>">
+                    <a class="page-link" href="<?php echo $base_url . 'page=' . ($page + 1); ?>">Next</a>
+                </li>
+            </ul>
+        </nav>
+        <?php endif; ?>
     </div>
 </div>
 

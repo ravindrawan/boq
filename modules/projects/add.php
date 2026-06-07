@@ -4,36 +4,41 @@ include '../../includes/functions.php';
 include '../../includes/header.php';
 include '../../includes/navbar.php';
 
-$project_types = getProjectTypes($conn);
-$funding_sources = getFundingSources($conn);
+$current_office = $_SESSION['office_name'] ?? null;
+$project_types = getProjectTypes($conn, $current_office);
+$funding_sources = getFundingSources($conn, $current_office);
 
 if (isset($_POST['submit'])) {
     // Collect Data
-    $pname = $_POST['project_name'];
-    $ptype = $_POST['project_type_id'];
-    $district = $_POST['district'];
-    $ds = $_POST['ds_division'];
-    $gn = $_POST['gn_division'];
-    $contractor = $_POST['contractor_name'];
-    $cida_reg = $_POST['cida_reg_no'];
-    $agreement = $_POST['agreement_no'];
-    $cida_grade_id = $_POST['cida_grade_id'];
-    $start_date = $_POST['start_date'];
-    $duration = $_POST['contract_period_months'];
-    $end_date = $_POST['completion_date'];
-    $amount = $_POST['contract_amount'];
-    $estimate = $_POST['estimate_cost'];
-    $fund_source = $_POST['funding_source_id'];
+    $pname = $conn->real_escape_string($_POST['project_name']);
+    $ptype = $conn->real_escape_string($_POST['project_type_id']);
+    $district = $conn->real_escape_string($_POST['district']);
+    $ds = $conn->real_escape_string($_POST['ds_division'] ?? '');
+    $gn = $conn->real_escape_string($_POST['gn_division'] ?? '');
+    $contractor = $conn->real_escape_string($_POST['contractor_name']);
+    $cida_reg = $conn->real_escape_string($_POST['cida_reg_no'] ?? '');
+    $agreement = $conn->real_escape_string($_POST['agreement_no'] ?? '');
+    
+    $cida_grade_val = !empty($_POST['cida_grade_id']) ? "'" . $conn->real_escape_string($_POST['cida_grade_id']) . "'" : "NULL";
+    
+    $start_date = $conn->real_escape_string($_POST['start_date']);
+    $duration = $conn->real_escape_string($_POST['contract_period_months']);
+    $end_date = $conn->real_escape_string($_POST['completion_date'] ?? '');
+    
+    $amount_val = !empty($_POST['contract_amount']) ? "'" . $conn->real_escape_string($_POST['contract_amount']) . "'" : "NULL";
+    $estimate_val = !empty($_POST['estimate_cost']) ? "'" . $conn->real_escape_string($_POST['estimate_cost']) . "'" : "NULL";
+    
+    $fund_source = $conn->real_escape_string($_POST['funding_source_id']);
 
     // Office Logic
-    $office_name = $_SESSION['office_name'] ?? 'Head Office';
+    $office_name = $conn->real_escape_string($_SESSION['office_name'] ?? 'Head Office');
     
     // Approval Logic
     $approval_status = ($_SESSION['role'] === 'office') ? 'pending' : 'approved';
 
     // Insert Initial Record to get ID
     $sql = "INSERT INTO projects (project_name, office_name, project_type_id, district, ds_division, gn_division, contractor_name, cida_reg_no, agreement_no, cida_grade_id, start_date, contract_period_months, completion_date, contract_amount, estimate_cost, funding_source_id, approval_status) 
-            VALUES ('$pname', '$office_name', '$ptype', '$district', '$ds', '$gn', '$contractor', '$cida_reg', '$agreement', '$cida_grade_id', '$start_date', '$duration', '$end_date', '$amount', '$estimate', '$fund_source', '$approval_status')";
+            VALUES ('$pname', '$office_name', '$ptype', '$district', '$ds', '$gn', '$contractor', '$cida_reg', '$agreement', $cida_grade_val, '$start_date', '$duration', '$end_date', $amount_val, $estimate_val, '$fund_source', '$approval_status')";
     
     if ($conn->query($sql) === TRUE) {
         $last_id = $conn->insert_id;
@@ -78,11 +83,11 @@ if (isset($_POST['submit'])) {
             <h5 class="text-primary mt-3">Basic Details</h5>
             <div class="row">
                 <div class="col-md-6 mb-3">
-                    <label>Project Name</label>
+                    <label>Project Name <span class="text-danger">*</span></label>
                     <input type="text" name="project_name" class="form-control" required>
                 </div>
                 <div class="col-md-6 mb-3">
-                    <label>Project Type</label>
+                    <label>Project Type <span class="text-danger">*</span></label>
                     <div class="input-group">
                         <select name="project_type_id" class="form-select" required>
                             <option value="">Select Type</option>
@@ -96,20 +101,20 @@ if (isset($_POST['submit'])) {
             <h5 class="text-primary mt-3">Location</h5>
             <div class="row">
                 <div class="col-md-4 mb-3">
-                    <label>District</label>
+                    <label>District <span class="text-danger">*</span></label>
                     <select name="district" id="district" class="form-select" required>
                         <option value="">Select District</option>
                     </select>
                 </div>
                 <div class="col-md-4 mb-3">
                     <label>DS Division</label>
-                    <select name="ds_division" id="ds_division" class="form-select" required>
+                    <select name="ds_division" id="ds_division" class="form-select">
                         <option value="">Select DS Division</option>
                     </select>
                 </div>
                 <div class="col-md-4 mb-3">
                     <label>GN Division</label>
-                    <select name="gn_division" id="gn_division" class="form-select" required>
+                    <select name="gn_division" id="gn_division" class="form-select">
                         <option value="">Select GN Division</option>
                     </select>
                 </div>
@@ -118,7 +123,7 @@ if (isset($_POST['submit'])) {
             <h5 class="text-primary mt-3">Contractor Details</h5>
             <div class="row">
                 <div class="col-md-6 mb-3">
-                    <label>Contractor Name</label>
+                    <label>Contractor Name <span class="text-danger">*</span></label>
                     <input type="text" name="contractor_name" class="form-control" required>
                 </div>
                 <div class="col-md-3 mb-3">
@@ -131,7 +136,7 @@ if (isset($_POST['submit'])) {
                         <select name="cida_grade_id" class="form-select">
                             <option value="">Select Grade</option>
                             <?php 
-                            $grades = getCidaGrades($conn);
+                            $grades = getCidaGrades($conn, $current_office);
                             foreach ($grades as $g) echo "<option value='{$g['id']}'>{$g['grade_name']}</option>"; 
                             ?>
                         </select>
@@ -147,19 +152,19 @@ if (isset($_POST['submit'])) {
             <h5 class="text-primary mt-3">Timeline & Financials</h5>
             <div class="row">
                 <div class="col-md-3 mb-3">
-                    <label>Start Date</label>
+                    <label>Start Date <span class="text-danger">*</span></label>
                     <input type="date" name="start_date" id="start_date" class="form-control" required>
                 </div>
                 <div class="col-md-3 mb-3">
-                    <label>Contract Period (Months)</label>
-                    <input type="number" name="contract_period_months" id="months" class="form-control" required>
+                    <label>Contract Period (Days) <span class="text-danger">*</span></label>
+                    <input type="number" name="contract_period_months" id="days" class="form-control" required>
                 </div>
                 <div class="col-md-3 mb-3">
                     <label>Completion Date</label>
                     <input type="date" name="completion_date" id="completion_date" class="form-control" readonly>
                 </div>
                  <div class="col-md-3 mb-3">
-                    <label>Funding Source</label>
+                    <label>Funding Source <span class="text-danger">*</span></label>
                      <div class="input-group">
                         <select name="funding_source_id" class="form-select" required>
                             <option value="">Select Source</option>
@@ -169,11 +174,11 @@ if (isset($_POST['submit'])) {
                     </div>
                 </div>
                 <div class="col-md-4 mb-3">
-                    <label>Estimate Cost (Rs.)</label>
+                    <label>Estimate Cost (Rs.) (Without VAT)</label>
                     <input type="number" step="0.01" name="estimate_cost" class="form-control">
                 </div>
                 <div class="col-md-4 mb-3">
-                    <label>Contract Amount (Rs.)</label>
+                    <label>Contract Amount (Rs.) (Without VAT)</label>
                     <input type="number" step="0.01" name="contract_amount" class="form-control">
                 </div>
             </div>
@@ -200,22 +205,22 @@ if (isset($_POST['submit'])) {
 <script>
     // --- Date Calculation ---
     const startDateInput = document.getElementById('start_date');
-    const monthsInput = document.getElementById('months');
+    const daysInput = document.getElementById('days');
     const completionDateInput = document.getElementById('completion_date');
 
     function calculateCompletionDate() {
         const startDate = new Date(startDateInput.value);
-        const months = parseInt(monthsInput.value);
+        const days = parseInt(daysInput.value);
         
-        if (startDate && !isNaN(months)) {
+        if (startDate && !isNaN(days)) {
             const endDate = new Date(startDate);
-            endDate.setMonth(endDate.getMonth() + months);
+            endDate.setDate(endDate.getDate() + days);
             completionDateInput.value = endDate.toISOString().split('T')[0];
         }
     }
 
     startDateInput.addEventListener('change', calculateCompletionDate);
-    monthsInput.addEventListener('input', calculateCompletionDate);
+    daysInput.addEventListener('input', calculateCompletionDate);
 
     // --- Cascading Dropdowns ---
     const districtSelect = document.getElementById('district');

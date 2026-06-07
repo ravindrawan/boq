@@ -17,6 +17,33 @@ if (isset($_POST['save_theme'])) {
     echo "<script>window.location='profile.php';</script>";
 }
 
+// Handle Password Change
+$msg = '';
+$err = '';
+if (isset($_POST['change_password'])) {
+    $current_pass = $_POST['current_password'];
+    $new_pass = $_POST['new_password'];
+    $confirm_pass = $_POST['confirm_password'];
+
+    $user_q = $conn->query("SELECT * FROM users WHERE id=$user_id")->fetch_assoc();
+    
+    if (password_verify($current_pass, $user_q['password'])) {
+        if ($new_pass === $confirm_pass) {
+            if (strlen($new_pass) >= 4) {
+                $hashed = password_hash($new_pass, PASSWORD_DEFAULT);
+                $conn->query("UPDATE users SET password='$hashed' WHERE id=$user_id");
+                $msg = "Password updated successfully!";
+            } else {
+                $err = "New password must be at least 4 characters long.";
+            }
+        } else {
+            $err = "New passwords do not match.";
+        }
+    } else {
+        $err = "Current password is incorrect.";
+    }
+}
+
 
 
 $user = $conn->query("SELECT * FROM users WHERE id=$user_id")->fetch_assoc();
@@ -51,6 +78,28 @@ $user = $conn->query("SELECT * FROM users WHERE id=$user_id")->fetch_assoc();
                         ?>
                     </div>
                     <button type="submit" name="save_theme" class="btn btn-primary">Apply Theme</button>
+                </form>
+                
+                <hr class="my-4">
+                
+                <h4 class="mb-3">Change Password</h4>
+                <?php if($msg) echo "<div class='alert alert-success'>$msg</div>"; ?>
+                <?php if($err) echo "<div class='alert alert-danger'>$err</div>"; ?>
+                
+                <form method="POST">
+                    <div class="mb-3">
+                        <label>Current Password</label>
+                        <input type="password" name="current_password" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label>New Password</label>
+                        <input type="password" name="new_password" class="form-control" required minlength="4">
+                    </div>
+                    <div class="mb-3">
+                        <label>Confirm New Password</label>
+                        <input type="password" name="confirm_password" class="form-control" required minlength="4">
+                    </div>
+                    <button type="submit" name="change_password" class="btn btn-warning w-100">Update Password</button>
                 </form>
                 
 

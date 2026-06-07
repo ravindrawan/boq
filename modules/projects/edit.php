@@ -51,21 +51,25 @@ if (isset($_GET['delete_photo']) && isset($_GET['id'])) {
 }
 
 if (isset($_POST['update'])) {
-    $pname = $_POST['project_name'];
-    $ptype = $_POST['project_type_id'];
-    $district = $_POST['district'];
-    $ds = $_POST['ds_division'];
-    $gn = $_POST['gn_division'];
-    $contractor = $_POST['contractor_name'];
-    $cida_reg = $_POST['cida_reg_no'];
-    $agreement = $_POST['agreement_no'];
-    $cida_grade_id = $_POST['cida_grade_id'];
-    $start_date = $_POST['start_date'];
-    $duration = $_POST['contract_period_months'];
-    $end_date = $_POST['completion_date'];
-    $amount = $_POST['contract_amount'];
-    $estimate = $_POST['estimate_cost'];
-    $fund_source = $_POST['funding_source_id'];
+    $pname = $conn->real_escape_string($_POST['project_name']);
+    $ptype = $conn->real_escape_string($_POST['project_type_id']);
+    $district = $conn->real_escape_string($_POST['district']);
+    $ds = $conn->real_escape_string($_POST['ds_division']);
+    $gn = $conn->real_escape_string($_POST['gn_division'] ?? '');
+    $contractor = $conn->real_escape_string($_POST['contractor_name']);
+    $cida_reg = $conn->real_escape_string($_POST['cida_reg_no'] ?? '');
+    $agreement = $conn->real_escape_string($_POST['agreement_no'] ?? '');
+    
+    $cida_grade_val = !empty($_POST['cida_grade_id']) ? "'" . $conn->real_escape_string($_POST['cida_grade_id']) . "'" : "NULL";
+    
+    $start_date = $conn->real_escape_string($_POST['start_date']);
+    $duration = $conn->real_escape_string($_POST['contract_period_months']);
+    $end_date = $conn->real_escape_string($_POST['completion_date'] ?? '');
+    
+    $amount_val = !empty($_POST['contract_amount']) ? "'" . $conn->real_escape_string($_POST['contract_amount']) . "'" : "NULL";
+    $estimate_val = !empty($_POST['estimate_cost']) ? "'" . $conn->real_escape_string($_POST['estimate_cost']) . "'" : "NULL";
+    
+    $fund_source = $conn->real_escape_string($_POST['funding_source_id']);
 
     // If edited by Office User, set back to Pending
     $approval_sql = "";
@@ -76,9 +80,9 @@ if (isset($_POST['update'])) {
     $sql = "UPDATE projects SET 
             project_name='$pname', project_type_id='$ptype', district='$district', 
             ds_division='$ds', gn_division='$gn', contractor_name='$contractor', 
-            cida_reg_no='$cida_reg', agreement_no='$agreement', cida_grade_id='$cida_grade_id', 
+            cida_reg_no='$cida_reg', agreement_no='$agreement', cida_grade_id=$cida_grade_val, 
             start_date='$start_date', contract_period_months='$duration', completion_date='$end_date', 
-            contract_amount='$amount', estimate_cost='$estimate', funding_source_id='$fund_source' 
+            contract_amount=$amount_val, estimate_cost=$estimate_val, funding_source_id='$fund_source' 
             $approval_sql
             WHERE id=$id";
 
@@ -129,11 +133,11 @@ if (isset($_POST['update'])) {
             <h5 class="text-primary mt-3">Basic Details</h5>
             <div class="row">
                 <div class="col-md-6 mb-3">
-                    <label>Project Name</label>
+                    <label>Project Name <span class="text-danger">*</span></label>
                     <input type="text" name="project_name" class="form-control" value="<?php echo $project['project_name']; ?>" required>
                 </div>
                 <div class="col-md-6 mb-3">
-                    <label>Project Type</label>
+                    <label>Project Type <span class="text-danger">*</span></label>
                     <select name="project_type_id" class="form-select" required>
                         <?php foreach ($project_types as $t) {
                             $selected = ($t['id'] == $project['project_type_id']) ? 'selected' : '';
@@ -146,21 +150,21 @@ if (isset($_POST['update'])) {
             <h5 class="text-primary mt-3">Location</h5>
             <div class="row">
                 <div class="col-md-4 mb-3">
-                    <label>District</label>
+                    <label>District <span class="text-danger">*</span></label>
                     <select name="district" id="district" class="form-select" required>
                         <option value="<?php echo $project['district']; ?>"><?php echo $project['district']; ?></option>
                         <!-- Loaded via JS dynamically too -->
                     </select>
                 </div>
                 <div class="col-md-4 mb-3">
-                    <label>DS Division</label>
+                    <label>DS Division <span class="text-danger">*</span></label>
                     <select name="ds_division" id="ds_division" class="form-select" required>
                         <option value="<?php echo $project['ds_division']; ?>"><?php echo $project['ds_division']; ?></option>
                     </select>
                 </div>
                 <div class="col-md-4 mb-3">
                     <label>GN Division</label>
-                    <select name="gn_division" id="gn_division" class="form-select" required>
+                    <select name="gn_division" id="gn_division" class="form-select">
                         <option value="<?php echo $project['gn_division']; ?>"><?php echo $project['gn_division']; ?></option>
                     </select>
                 </div>
@@ -174,7 +178,7 @@ if (isset($_POST['update'])) {
             <h5 class="text-primary mt-3">Contractor & Funds</h5>
             <div class="row">
                 <div class="col-md-6 mb-3">
-                    <label>Contractor Name</label>
+                    <label>Contractor Name <span class="text-danger">*</span></label>
                     <input type="text" name="contractor_name" class="form-control" value="<?php echo $project['contractor_name']; ?>" required>
                 </div>
                  <div class="col-md-3 mb-3">
@@ -202,7 +206,7 @@ if (isset($_POST['update'])) {
                     <input type="text" name="agreement_no" class="form-control" value="<?php echo $project['agreement_no']; ?>">
                 </div>
                   <div class="col-md-6 mb-3">
-                    <label>Funding Source</label>
+                    <label>Funding Source <span class="text-danger">*</span></label>
                     <select name="funding_source_id" class="form-select" required>
                         <?php foreach ($funding_sources as $s) {
                             $selected = ($s['id'] == $project['funding_source_id']) ? 'selected' : '';
@@ -215,23 +219,23 @@ if (isset($_POST['update'])) {
             <h5 class="text-primary mt-3">Timeline & Cost</h5>
             <div class="row">
                 <div class="col-md-3 mb-3">
-                    <label>Start Date</label>
+                    <label>Start Date <span class="text-danger">*</span></label>
                     <input type="date" name="start_date" id="start_date" class="form-control" value="<?php echo $project['start_date']; ?>" required>
                 </div>
                 <div class="col-md-3 mb-3">
-                    <label>Months</label>
-                    <input type="number" name="contract_period_months" id="months" class="form-control" value="<?php echo $project['contract_period_months']; ?>" required>
+                    <label>Days <span class="text-danger">*</span></label>
+                    <input type="number" name="contract_period_months" id="days" class="form-control" value="<?php echo $project['contract_period_months']; ?>" required>
                 </div>
                 <div class="col-md-3 mb-3">
                     <label>Completion Date</label>
                     <input type="date" name="completion_date" id="completion_date" class="form-control" value="<?php echo $project['completion_date']; ?>" readonly>
                 </div>
                 <div class="col-md-3 mb-3">
-                    <label>Contract Amount (Rs.)</label>
+                    <label>Contract Amount (Rs.) (Without VAT)</label>
                     <input type="number" step="0.01" name="contract_amount" class="form-control" value="<?php echo $project['contract_amount']; ?>">
                 </div>
                 <div class="col-md-3 mb-3">
-                    <label>Estimate Cost (Rs.)</label>
+                    <label>Estimate Cost (Rs.) (Without VAT)</label>
                     <input type="number" step="0.01" name="estimate_cost" class="form-control" value="<?php echo $project['estimate_cost']; ?>">
                 </div>
             </div>
@@ -285,22 +289,22 @@ if (isset($_POST['update'])) {
 <script>
     // --- Date Calculation ---
     const startDateInput = document.getElementById('start_date');
-    const monthsInput = document.getElementById('months');
+    const daysInput = document.getElementById('days');
     const completionDateInput = document.getElementById('completion_date');
 
     function calculateCompletionDate() {
         const startDate = new Date(startDateInput.value);
-        const months = parseInt(monthsInput.value);
+        const days = parseInt(daysInput.value);
         
-        if (startDate && !isNaN(months)) {
+        if (startDate && !isNaN(days)) {
             const endDate = new Date(startDate);
-            endDate.setMonth(endDate.getMonth() + months);
+            endDate.setDate(endDate.getDate() + days);
             completionDateInput.value = endDate.toISOString().split('T')[0];
         }
     }
 
     startDateInput.addEventListener('change', calculateCompletionDate);
-    monthsInput.addEventListener('input', calculateCompletionDate);
+    daysInput.addEventListener('input', calculateCompletionDate);
 
     // --- Cascading Dropdowns Logic ---
     // If user changes district, we reload DS.
