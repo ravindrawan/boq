@@ -20,11 +20,18 @@ function uploadFile($file, $uploadDir) {
 }
 
 // Function to get Project Types
-function getProjectTypes($conn) {
+// If $office_name is provided, returns records for that office + global records (NULL office_name)
+// If $office_name is NULL/empty, returns ALL records (admin view)
+function getProjectTypes($conn, $office_name = null) {
     $types = [];
-    $sql = "SELECT * FROM project_types";
+    if (!empty($office_name)) {
+        $safe = $conn->real_escape_string($office_name);
+        $sql = "SELECT * FROM project_types WHERE office_name = '$safe' OR office_name IS NULL OR office_name = '' ORDER BY type_name";
+    } else {
+        $sql = "SELECT * FROM project_types ORDER BY type_name";
+    }
     $result = $conn->query($sql);
-    if ($result->num_rows > 0) {
+    if ($result && $result->num_rows > 0) {
         while($row = $result->fetch_assoc()) {
             $types[] = $row;
         }
@@ -33,23 +40,38 @@ function getProjectTypes($conn) {
 }
 
 // Function to get Funding Sources
-function getFundingSources($conn) {
+// If $office_name is provided, returns records for that office + global records (NULL office_name)
+// If $office_name is NULL/empty, returns ALL records (admin view)
+function getFundingSources($conn, $office_name = null) {
     $sources = [];
-    $sql = "SELECT * FROM funding_sources";
+    if (!empty($office_name)) {
+        $safe = $conn->real_escape_string($office_name);
+        $sql = "SELECT * FROM funding_sources WHERE office_name = '$safe' OR office_name IS NULL OR office_name = '' ORDER BY source_name";
+    } else {
+        $sql = "SELECT * FROM funding_sources ORDER BY source_name";
+    }
     $result = $conn->query($sql);
-    if ($result->num_rows > 0) {
+    if ($result && $result->num_rows > 0) {
         while($row = $result->fetch_assoc()) {
             $sources[] = $row;
         }
     }
     return $sources;
 }
+
 // Function to get CIDA Grades
-function getCidaGrades($conn) {
+// If $office_name is provided, returns records for that office + global records (NULL office_name)
+// If $office_name is NULL/empty, returns ALL records (admin view)
+function getCidaGrades($conn, $office_name = null) {
     $grades = [];
-    $sql = "SELECT * FROM cida_grades ORDER BY grade_name";
+    if (!empty($office_name)) {
+        $safe = $conn->real_escape_string($office_name);
+        $sql = "SELECT * FROM cida_grades WHERE office_name = '$safe' OR office_name IS NULL OR office_name = '' ORDER BY grade_name";
+    } else {
+        $sql = "SELECT * FROM cida_grades ORDER BY grade_name";
+    }
     $result = $conn->query($sql);
-    if ($result->num_rows > 0) {
+    if ($result && $result->num_rows > 0) {
         while($row = $result->fetch_assoc()) {
             $grades[] = $row;
         }
