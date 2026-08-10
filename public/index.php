@@ -76,15 +76,20 @@ $total_pages = ($total_rows > 0) ? ceil($total_rows / $limit) : 1;
 if ($page > $total_pages) $page = $total_pages;
 
 // Build Query with LIMIT and OFFSET
-$sql = "SELECT p.*, t.type_name, f.photo_path 
+
+// Build Query safely without complex subquery joins that might hide projects
+$sql = "SELECT p.*, 
+        (SELECT type_name FROM project_types WHERE id = p.project_type_id LIMIT 1) as type_name,
+        (SELECT photo_path FROM project_photos WHERE project_id = p.id LIMIT 1) as photo_path
         FROM projects p 
-        LEFT JOIN project_types t ON p.project_type_id = t.id 
-        LEFT JOIN (SELECT project_id, photo_path FROM project_photos GROUP BY project_id) f ON p.id = f.project_id
         WHERE $where_conditions
         ORDER BY p.id DESC
         LIMIT $limit OFFSET $offset";
 
 $result = $conn->query($sql);
+
+
+
 
 // Get Districts and Offices for Filters safely
 $districts = $conn->query("SELECT DISTINCT district FROM projects WHERE approval_status = 'approved'");
